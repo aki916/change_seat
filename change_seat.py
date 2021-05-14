@@ -75,9 +75,9 @@ def optimize(
         # problem.addConstraint(-alpha2[sID1, sID2, 1] <= width_difference  <= alpha2[sID1, sID2, 1], f"width_abs_{sID1}_close") 
         problem.addConstraint(-alpha2[sID1, sID2, 1] <= width_difference, f"width_abs_{sID1}_close_1") 
         problem.addConstraint(width_difference  <= alpha2[sID1, sID2, 1], f"width_abs_{sID1}_close_2") 
-        # problem.addConstraint(alpha2[c,0] + alpha2[c,1] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}")
-        problem.addConstraint(alpha2[sID1, sID2, 0] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}_height")
-        problem.addConstraint(alpha2[sID1, sID2, 1] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}_width")
+        problem.addConstraint(alpha2[sID1, sID2,0] + alpha2[sID1, sID2,1] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}")
+        # problem.addConstraint(alpha2[sID1, sID2, 0] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}_height")
+        # problem.addConstraint(alpha2[sID1, sID2, 1] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}_width")
         # c += 1
 
     #一つの席には一人だけ
@@ -121,10 +121,6 @@ def optimize(
                 if pulp.value(x[sID2, h, w]) > 0:
                     print(f'user {sID2} seat {h}-{w} : {pulp.value(x[sID2, h, w])}')
                     h1, w1 = h, w
-        print('height')
-        print((h0+1) * (x[sID1, h0, w0].value() - x[sID2, h0, w0].value()) + (h1+1) * (x[sID1, h1, w1].value() - x[sID2, h1, w1].value()))
-        print('width')
-        print((w0+1) * (x[sID1, h0, w0].value() - x[sID2, h0, w0].value()) + (w1+1) * (x[sID1, h1, w1].value() - x[sID2, h1, w1].value()))
         print(f"ub : {ub}")   
         print(alpha2[sID1, sID2,0].value(), alpha2[sID1, sID2,1].value())
 
@@ -147,7 +143,7 @@ def main():
 
     # key:tuple of studentID, value:int
     far_constraint   = {( 5,  7) : 3, ( 1, 21) : 2}
-    close_constraint = {(12, 14) : 2, (39, 31) : 1}
+    close_constraint = {(12, 14) : 2, (39, 31) : 6}
 
     #値を入れる
     # for i in range(seat):
