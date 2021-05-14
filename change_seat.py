@@ -46,34 +46,39 @@ def optimize(
     c = 0
     for (sID1, sID2), lb in far_constraint.items():
         height_difference = pulp.lpSum(
-            h * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
+            (h+1) * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
         )
         width_difference = pulp.lpSum(
-            w * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
+            (w+1) * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
         )
-        problem.addConstraint(-alpha1[c,0] <= height_difference <= alpha1[c,0], f"height_abs_{c}_far") 
-        problem.addConstraint(-alpha1[c,1] <= width_difference  <= alpha1[c,1], f"width_abs_{c}_far") 
+        problem.addConstraint(-alpha1[c,0] <= height_difference, f"height_abs_{c}_far_1") 
+        problem.addConstraint(height_difference <= alpha1[c,0], f"height_abs_{c}_far_2") 
+        problem.addConstraint(-alpha1[c,1] <= width_difference, f"width_abs_{c}_far_1") 
+        problem.addConstraint(width_difference  <= alpha1[c,1], f"width_abs_{c}_far_2") 
         problem.addConstraint(alpha1[c,0] + alpha1[c,1] >= lb, f"s{sID1}_s{sID2}_far_lb{lb}")
         c += 1
 
     # 近づける制約
-    alpha2 = {(i,j) : 
-        pulp.LpVariable(name=f'a2_{i}_{j}', cat='Integer', lowBound=0) 
-        for i in range(len(close_constraint)) for j in range(2)
+    alpha2 = {(sID1, sID2, j) : 
+        pulp.LpVariable(name=f'a2_{sID1}_{sID2}_{j}', cat='Continuous', lowBound=0) 
+        for (sID1, sID2) in close_constraint.keys() for j in range(2)
         }
-
-    c = 0
     for (sID1, sID2), ub in close_constraint.items():
         height_difference = pulp.lpSum(
-            h * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
+            (h+1) * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
         )
         width_difference = pulp.lpSum(
-            w * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
+            (w+1) * (x[sID1, h, w] - x[sID2, h, w]) for h in range(height) for w in range(width)
         )
-        problem.addConstraint(-alpha2[c,0] <= height_difference <= alpha2[c,0], f"height_abs_{c}_close") 
-        problem.addConstraint(-alpha2[c,1] <= width_difference  <= alpha2[c,1], f"width_abs_{c}_close") 
-        problem.addConstraint(alpha2[c,0] + alpha2[c,1] <= ub, f"s{sID1}_s{sID2}_close_ub{lb}")
-        c += 1
+        problem.addConstraint(-alpha2[sID1, sID2, 0] <= height_difference, f"height_abs_{sID1}_close_1") 
+        problem.addConstraint(height_difference <= alpha2[sID1, sID2, 0], f"height_abs_{sID1}_close_2") 
+        # problem.addConstraint(-alpha2[sID1, sID2, 1] <= width_difference  <= alpha2[sID1, sID2, 1], f"width_abs_{sID1}_close") 
+        problem.addConstraint(-alpha2[sID1, sID2, 1] <= width_difference, f"width_abs_{sID1}_close_1") 
+        problem.addConstraint(width_difference  <= alpha2[sID1, sID2, 1], f"width_abs_{sID1}_close_2") 
+        # problem.addConstraint(alpha2[c,0] + alpha2[c,1] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}")
+        problem.addConstraint(alpha2[sID1, sID2, 0] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}_height")
+        problem.addConstraint(alpha2[sID1, sID2, 1] <= ub, f"s{sID1}_s{sID2}_close_ub{ub}_width")
+        # c += 1
 
     #一つの席には一人だけ
     for h in range(height):
@@ -94,17 +99,40 @@ def optimize(
     # print("目的関数値 = {}".format(pulp.value(problem.objective)))
 
 
-    # for sID in range(num_student):
-    #     for h in range(height):
-    #         for w in range(width):
-    #             if pulp.value(x[sID, h, w]) > 0:
-    #                 print(f'user {sID} seat {h}-{w} : {pulp.value(x[sID, h, w])}')
+    c = 0
+    for (sID1, sID2), lb in far_constraint.items():
+        for h in range(height):
+            for w in range(width):
+                if pulp.value(x[sID1, h, w]) > 0:
+                    print(f'user {sID1} seat {h}-{w} : {pulp.value(x[sID1, h, w])}')
+                if pulp.value(x[sID2, h, w]) > 0:
+                    print(f'user {sID2} seat {h}-{w} : {pulp.value(x[sID2, h, w])}')
+        print(alpha1[c,0].value(), alpha1[c,1].value())
+        print(f"lb : {lb}")   
+        c += 1
+
+    print()
+    for (sID1, sID2), ub in close_constraint.items():
+        for h in range(height):
+            for w in range(width):
+                if pulp.value(x[sID1, h, w]) > 0:
+                    print(f'user {sID1} seat {h}-{w} : {pulp.value(x[sID1, h, w])}')
+                    h0, w0 = h, w
+                if pulp.value(x[sID2, h, w]) > 0:
+                    print(f'user {sID2} seat {h}-{w} : {pulp.value(x[sID2, h, w])}')
+                    h1, w1 = h, w
+        print('height')
+        print((h0+1) * (x[sID1, h0, w0].value() - x[sID2, h0, w0].value()) + (h1+1) * (x[sID1, h1, w1].value() - x[sID2, h1, w1].value()))
+        print('width')
+        print((w0+1) * (x[sID1, h0, w0].value() - x[sID2, h0, w0].value()) + (w1+1) * (x[sID1, h1, w1].value() - x[sID2, h1, w1].value()))
+        print(f"ub : {ub}")   
+        print(alpha2[sID1, sID2,0].value(), alpha2[sID1, sID2,1].value())
 
 
 def main():
-    num_student = 80
+    num_student = 42
     # seat = n
-    height, width = 8, 10
+    height, width = 6, 7
     # W = np.zeros([seat,n])
 
     # key:studentID, value:(height, width)
@@ -118,8 +146,8 @@ def main():
     }
 
     # key:tuple of studentID, value:int
-    far_constraint = {(5,7):3, (1,21):2}
-    close_constraint = {(12,14):2, (39,31):1}
+    far_constraint   = {( 5,  7) : 3, ( 1, 21) : 2}
+    close_constraint = {(12, 14) : 2, (39, 31) : 1}
 
     #値を入れる
     # for i in range(seat):
